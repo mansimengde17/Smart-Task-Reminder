@@ -1,0 +1,4 @@
+GoalID,GoalName,TargetMinutes,ActualMinutes,DueDate,Status
+G001,Finish ML coursework,1200,660,2024-09-23,At Risk
+G002,Ship Smart Reminder MVP,900,630,2024-09-30,On Track
+G003,Write weekly study summary,240,204,2024-10-07,On Track

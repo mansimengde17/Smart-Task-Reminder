@@ -1,0 +1,64 @@
+// FR1 Focus Score page uses FocusScore, DeepWorkFlag, DeepWorkPct
+// FR2 Distraction page leverages CategoryLoss, CategoryLossPct, ProdLossPct
+// FR3 Calendar page consumes FocusByHour with Calendar table to map energy curve
+// FR4 Weekly Report page highlights FocusScore_ThisWeek/PriorWeek/Delta KPIs
+
+FocusScore :=
+VAR dur = AVERAGE(Sessions[DurationMin])
+VAR comp = AVERAGE(Sessions[CompletedCount])
+VAR aband = AVERAGE(Sessions[AbandonedCount])
+VAR tab = AVERAGE(Sessions[TabSwitchCount])
+VAR completionRate = DIVIDE(comp, comp + aband, 0)
+VAR base =
+    50
+    + 20 * completionRate
+    + 20 * MIN(1, DIVIDE(dur, 60, 0))
+    - 10 * MIN(1, DIVIDE(tab, 20, 0))
+RETURN MAX(0, MIN(100, base))
+
+DeepWorkFlag :=
+VAR fs = [FocusScore]
+VAR dur = AVERAGE(Sessions[DurationMin])
+VAR tab = AVERAGE(Sessions[TabSwitchCount])
+RETURN IF(fs >= 70 && dur >= 45 && tab <= 5, 1, 0)
+
+DeepWorkPct :=
+DIVIDE(
+    SUMX(VALUES(Sessions[SessionID]), [DeepWorkFlag]),
+    COUNTROWS(VALUES(Sessions[SessionID]))
+)
+
+ProdLossPct :=
+VAR LossMin = SUM(Interruptions[DurationMin])
+VAR WorkMin = SUM(Sessions[DurationMin])
+RETURN DIVIDE(LossMin, WorkMin, 0)
+
+CategoryLoss :=
+SUM(Interruptions[DurationMin])
+
+CategoryLossPct :=
+DIVIDE(
+    [CategoryLoss],
+    CALCULATE(SUM(Interruptions[DurationMin]), ALL(Interruptions[Category]))
+)
+
+FocusByHour :=
+AVERAGEX(
+    VALUES('Time'[HourOfDay]),
+    CALCULATE([FocusScore])
+)
+
+FocusScore_ThisWeek :=
+CALCULATE(
+    [FocusScore],
+    DATESINPERIOD('Date'[Date], MAX('Date'[Date]), -7, DAY)
+)
+
+FocusScore_PriorWeek :=
+CALCULATE(
+    [FocusScore],
+    DATEADD('Date'[Date], -7, DAY)
+)
+
+FocusScore_Delta :=
+[FocusScore_ThisWeek] - [FocusScore_PriorWeek]
